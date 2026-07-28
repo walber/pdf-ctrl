@@ -1,6 +1,6 @@
 # Merge and Reorganize PDF files
 
-Here is the steps to run pdf-ctrl locally:
+Here are the steps to run pdf-ctrl locally:
 
 ### 1. Clone the project
 ```bash
@@ -18,8 +18,6 @@ npm run test
 ```
 
 ## Or Simply do this:
-
-Follow the steps to run PDF-Ctrl locally.
 
 ### 1. Install pdf-ctrl using *npm* package manager
 
