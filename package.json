@@ -4,8 +4,7 @@
   "description": "Merge, rearrange pages, and download all-in-one PDF document",
   "type": "module",
   "files": [
-    "dist",
-    "assets"
+    "dist"
   ],
   "dependencies": {
     "@libpdf/core": "^0.3.6",
