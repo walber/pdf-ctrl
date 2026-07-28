@@ -2,30 +2,13 @@
 
 Here are the steps to run pdf-ctrl locally:
 
-### 1. Clone the project
-```bash
-git clone https://github.com/walber/pdf-ctrl.git
-```
-
-### 2. To build
-```bash
-npm run build
-```
-
-### 3. Run the test
-```bash
-npm run test
-```
-
-## Or Simply do this:
-
 ### 1. Install pdf-ctrl using *npm* package manager
 
 ```bash
 npm i pdf-ctrl
 ```
 
-### 2. Add the following content to *index.html* file:
+### 2. Add the following content to an *index.html* file:
 
 ```html
 <!DOCTYPE html>
@@ -113,7 +96,24 @@ npm i pdf-ctrl
 ### 3. Startup the http server
 ```bash
 npx http-server --port 3000
-``` 
+```
+
+## Or Simply Do This:
+
+### 1. Clone it
+```bash
+git clone https://github.com/walber/pdf-ctrl.git
+```
+
+### 2. Build it
+```bash
+npm run build
+```
+
+### 3. Run it
+```bash
+npm run test
+```
 
 ## Here's what you get:
 
