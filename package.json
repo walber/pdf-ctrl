@@ -3,8 +3,10 @@
   "version": "1.0.11",
   "description": "Merge, rearrange pages, and download all-in-one PDF document",
   "type": "module",
+  "main": "dist/pdf-ctrl.js",
   "files": [
-    "dist"
+    "dist",
+    "assets"
   ],
   "dependencies": {
     "@libpdf/core": "^0.3.6",
