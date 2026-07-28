@@ -1,6 +1,6 @@
 {
   "name": "pdf-ctrl",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Merge, rearrange pages, and download all-in-one PDF document",
   "type": "module",
   "files": [
