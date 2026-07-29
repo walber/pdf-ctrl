@@ -66,7 +66,7 @@ class PDFGrid {
             pageThumb.ondragover = this.dragOverHandler();
             pageThumb.ondragstart = this.dragStartHandler();
             pageThumb.ondragenter = this.dragEnterHandler;
-            pageThumb.ondragleave = this.dragLeaveHander;
+            pageThumb.ondragleave = this.dragLeaveHandler;
             pageThumb.ondragend = this.dragEndHandler;
 
             this.#container.append(pageThumb);
@@ -150,7 +150,7 @@ class PDFGrid {
         }
     }
 
-    private dragLeaveHander (e: DragEvent) {
+    private dragLeaveHandler (e: DragEvent) {
         if (e.target) {
             const target = e.target as HTMLElement;
             target.classList.remove('insert-before', 'insert-after');
