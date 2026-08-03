@@ -18,14 +18,15 @@ npm i pdf-ctrl
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF-Ctrl</title>
 
-    <link rel="stylesheet" href="node_modules/pdf-ctrl/dist/pdf-ctrl.min.css">
+    <link rel="stylesheet" href="dist/pdf-ctrl.min.css">
 
     <script type="module" defer>
-        import PDFGrid from './node_modules/pdf-ctrl/dist/pdf-ctrl.min.js';
+        import PDFGrid from './dist/pdf-ctrl.min.js';
 
         document.addEventListener('DOMContentLoaded', () => {
             const openButton = document.querySelector('#filePicker');
             const downloadButton = document.querySelector('#download');
+            const add = document.querySelector('#addNewPage');
             const filePicker = document.createElement('input');
             const grid = new PDFGrid('#main');
 
@@ -35,9 +36,12 @@ npm i pdf-ctrl
 
             filePicker.onchange = () => grid.render(filePicker.files);
             
+            add.onclick = (e) => grid.addNewPage();
+
             downloadButton.onclick = (e) => grid.download();
 
             openButton.onclick = (e) => filePicker.showPicker();
+
         });
     </script>
 
@@ -81,6 +85,7 @@ npm i pdf-ctrl
 <body>
     <div id="toolbar">
         <input class="styled" type="button" value="Open" id="filePicker" />
+        <input class="styled" type="button" value="Add New Page" id="addNewPage" />
         <input class="styled" type="button" value="Download" id="download" />
     </div>
 
