@@ -18,10 +18,10 @@ npm i pdf-ctrl
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF-Ctrl</title>
 
-    <link rel="stylesheet" href="dist/pdf-ctrl.min.css">
+    <link rel="stylesheet" href="node_modules/pdf-ctrl/dist/pdf-ctrl.min.css">
 
     <script type="module" defer>
-        import PDFGrid from './dist/pdf-ctrl.min.js';
+        import PDFGrid from './node_modules/pdf-ctrl/dist/pdf-ctrl.min.js';
 
         document.addEventListener('DOMContentLoaded', () => {
             const openButton = document.querySelector('#filePicker');
