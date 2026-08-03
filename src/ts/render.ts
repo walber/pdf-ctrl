@@ -1,7 +1,6 @@
 
-import type { PDFPageProxy, RenderParameters } from "pdfjs-dist/types/src/display/api.js";
+import { PDFPageProxy, RenderParameters } from "pdfjs-dist/types/src/display/api.js";
 import * as store from '@ts/store';
-import '@styles/app.css';
 
 class PDFPageThumb extends HTMLCanvasElement {
 
@@ -16,10 +15,11 @@ class PDFPageThumb extends HTMLCanvasElement {
         this.renderPromise = pagePromise.then((page) => {
             const viewport = page.getViewport({ scale: PDFPageThumb.THUMB_SCALE });
             const ctx = this.getContext('2d');
-
+            
             this.classList = 'pdfier-page';
             this.width = viewport.width;
             this.height = viewport.height;
+            this.dataset.pageNum = `${page.pageNumber}`;
 
             const renderContext = {
                 canvasContext: ctx,
@@ -44,7 +44,7 @@ class PDFGrid {
         if (container == null) {
             throw Error(`Invalid element: ${el}`);
         }
-        
+
         this.#container = container;
         this.#container.classList = 'pdfier-page-grid';
         this.#dragged = document.createElement('span');
@@ -53,27 +53,29 @@ class PDFGrid {
 
     async render (files: FileList) {
         this.#container.replaceChildren();
-
+        
         const pdf = await store.merge(files);
         const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
             const pageNum = index + 1;
             const pagePromise = pdf.getPage(pageNum);
             const pageThumb = new PDFPageThumb(pagePromise);
-
-            pageThumb.dataset.pageNum = `${pageNum}`;
-
-            pageThumb.ondrop = this.dropHandler();
-            pageThumb.ondragover = this.dragOverHandler();
-            pageThumb.ondragstart = this.dragStartHandler();
-            pageThumb.ondragenter = this.dragEnterHandler;
-            pageThumb.ondragleave = this.dragLeaveHandler;
-            pageThumb.ondragend = this.dragEndHandler;
-
-            this.#container.append(pageThumb);
-            return pageThumb.renderPromise;
+            
+            return this.renderPageThumb(pageThumb);
         });
 
         return Promise.all(renderTasks);
+    }
+
+    renderPageThumb(pageThumb: PDFPageThumb) {
+        pageThumb.ondrop = this.dropHandler();
+        pageThumb.ondragover = this.dragOverHandler();
+        pageThumb.ondragstart = this.dragStartHandler();
+        pageThumb.ondragenter = this.dragEnterHandler;
+        pageThumb.ondragleave = this.dragLeaveHandler;
+        pageThumb.ondragend = this.dragEndHandler;
+
+        this.#container.append(pageThumb);
+        return pageThumb.renderPromise;
     }
 
     download () {
@@ -85,8 +87,19 @@ class PDFGrid {
 
             return Number.parseInt(pageThumb.dataset.pageNum) - 1;
         });
-        
-        return store.downloadFinalDoc(pageIndexes);
+
+        return store.download(pageIndexes);
+    }
+
+    async addNewPage() {
+        const pdf = await store.addNewPage();
+        const lastPage = pdf.numPages;
+        const pagePromise = pdf.getPage(lastPage);
+        const pageThumb = new PDFPageThumb(pagePromise);
+
+        pageThumb.dataset.pageNum = `${lastPage}`;
+
+        return this.renderPageThumb(pageThumb);
     }
 
     private dropHandler () {

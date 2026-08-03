@@ -13,6 +13,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const openButton = document.querySelector('#filePicker');
             const downloadButton = document.querySelector('#download');
+            const add = document.querySelector('#addNewPage');
             const filePicker = document.createElement('input');
             const grid = new PDFGrid('#main');
 
@@ -22,9 +23,12 @@
 
             filePicker.onchange = () => grid.render(filePicker.files);
             
+            add.onclick = (e) => grid.addNewPage();
+
             downloadButton.onclick = (e) => grid.download();
 
             openButton.onclick = (e) => filePicker.showPicker();
+
         });
     </script>
 
@@ -68,6 +72,7 @@
 <body>
     <div id="toolbar">
         <input class="styled" type="button" value="Open" id="filePicker" />
+        <input class="styled" type="button" value="Add New Page" id="addNewPage" />
         <input class="styled" type="button" value="Download" id="download" />
     </div>
 
