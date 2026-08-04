@@ -2,38 +2,9 @@
 import { PDFPageProxy, RenderParameters } from "pdfjs-dist/types/src/display/api.js";
 import * as store from '@ts/store';
 
-class PDFPageThumb extends HTMLCanvasElement {
-
-    renderPromise: Promise<void>;
-    static THUMB_SCALE = 0.4;
-
-    constructor (pagePromise: Promise<PDFPageProxy>) {
-        super();
-
-        this.draggable = true;
-
-        this.renderPromise = pagePromise.then((page) => {
-            const viewport = page.getViewport({ scale: PDFPageThumb.THUMB_SCALE });
-            const ctx = this.getContext('2d');
-            
-            this.classList = 'pdfier-page';
-            this.width = viewport.width;
-            this.height = viewport.height;
-            this.dataset.pageNum = `${page.pageNumber}`;
-
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-
-            const renderTask = page.render(renderContext as RenderParameters);
-            return renderTask.promise;
-        });
-    }
-}
-
 class PDFGrid {
 
+    #THUMB_SCALE = 0.4;
     #container: HTMLElement;
     #dragged: HTMLElement;
     #hovered: HTMLElement;
@@ -58,29 +29,51 @@ class PDFGrid {
         const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
             const pageNum = index + 1;
             const pagePromise = pdf.getPage(pageNum);
-            const pageThumb = new PDFPageThumb(pagePromise);
-            
-            return this.renderPageThumb(pageThumb);
+
+            return this.renderPageThumb(pagePromise);
         });
 
         return Promise.all(renderTasks);
     }
 
-    renderPageThumb(pageThumb: PDFPageThumb) {
-        pageThumb.ondrop = this.dropHandler();
-        pageThumb.ondragover = this.dragOverHandler();
-        pageThumb.ondragstart = this.dragStartHandler();
-        pageThumb.ondragenter = this.dragEnterHandler;
-        pageThumb.ondragleave = this.dragLeaveHandler;
-        pageThumb.ondragend = this.dragEndHandler;
+    renderPageThumb(pagePromise: Promise<PDFPageProxy>) {
+        const pageThumb = document.createElement('canvas');
+
+        pageThumb.draggable = true;
+        pageThumb.classList = 'pdfier-page';
 
         this.#container.append(pageThumb);
-        return pageThumb.renderPromise;
+
+        const renderTaskPromise = pagePromise.then((page) => {
+            const viewport = page.getViewport({ scale: this.#THUMB_SCALE });
+            const ctx = pageThumb.getContext('2d');
+            
+            pageThumb.width = viewport.width;
+            pageThumb.height = viewport.height;
+            pageThumb.dataset.pageNum = `${page.pageNumber}`;
+
+            pageThumb.ondrop = this.dropHandler();
+            pageThumb.ondragover = this.dragOverHandler();
+            pageThumb.ondragstart = this.dragStartHandler();
+            pageThumb.ondragenter = this.dragEnterHandler;
+            pageThumb.ondragleave = this.dragLeaveHandler;
+            pageThumb.ondragend = this.dragEndHandler;
+    
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+    
+            const renderTask = page.render(renderContext as RenderParameters);
+            return renderTask.promise;
+        });
+
+        return renderTaskPromise;
     }
 
     download () {
         const children = this.#container.querySelectorAll('canvas[data-page-num]');
-        const pageIndexes = Array.from(children as NodeListOf<PDFPageThumb>, (pageThumb) => {
+        const pageIndexes = Array.from(children as NodeListOf<HTMLCanvasElement>, (pageThumb) => {
             if (pageThumb.dataset.pageNum == null) {
                 throw Error('undefined pageNum');
             }
@@ -95,11 +88,8 @@ class PDFGrid {
         const pdf = await store.addNewPage();
         const lastPage = pdf.numPages;
         const pagePromise = pdf.getPage(lastPage);
-        const pageThumb = new PDFPageThumb(pagePromise);
 
-        pageThumb.dataset.pageNum = `${lastPage}`;
-
-        return this.renderPageThumb(pageThumb);
+        return this.renderPageThumb(pagePromise);
     }
 
     private dropHandler () {
@@ -117,8 +107,16 @@ class PDFGrid {
         }
     }
 
-    private dragEnterHandler (e: DragEvent) {
-        e.preventDefault();
+    private dragStartHandler () {
+        return (e: DragEvent) => {
+            this.#dragged = e.target as HTMLElement;
+    
+            if (e.dataTransfer?.items) { 
+                e.dataTransfer.setData('text/html', this.#dragged.innerHTML);
+            }
+    
+            this.#dragged.classList.add('dragging');
+        }
     }
 
     private dragOverHandler () {
@@ -177,19 +175,9 @@ class PDFGrid {
         }
     }
 
-    private dragStartHandler () {
-        return (e: DragEvent) => {
-            this.#dragged = e.target as HTMLElement;
-    
-            if (e.dataTransfer?.items) { 
-                e.dataTransfer.setData('text/html', this.#dragged.innerHTML);
-            }
-    
-            this.#dragged.classList.add('dragging');
-        }
+    private dragEnterHandler (e: DragEvent) {
+        e.preventDefault();
     }
 }
-
-window.customElements.define('pdf-page-thumb', PDFPageThumb, { extends: 'canvas' });
 
 export default PDFGrid;
