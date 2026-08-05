@@ -1,4 +1,3 @@
-
 import { PDFPageProxy, RenderParameters } from "pdfjs-dist/types/src/display/api.js";
 import * as store from '@ts/store';
 
@@ -22,55 +21,6 @@ class PDFGrid {
         this.#hovered = document.createElement('span');
     }
 
-    async render (files: FileList) {
-        this.#container.replaceChildren();
-        
-        const pdf = await store.merge(files);
-        const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
-            const pageNum = index + 1;
-            const pagePromise = pdf.getPage(pageNum);
-
-            return this.renderPageThumb(pagePromise);
-        });
-
-        return Promise.all(renderTasks);
-    }
-
-    renderPageThumb(pagePromise: Promise<PDFPageProxy>) {
-        const pageThumb = document.createElement('canvas');
-
-        pageThumb.draggable = true;
-        pageThumb.classList = 'pdfier-page';
-
-        this.#container.append(pageThumb);
-
-        const renderTaskPromise = pagePromise.then((page) => {
-            const viewport = page.getViewport({ scale: this.#THUMB_SCALE });
-            const ctx = pageThumb.getContext('2d');
-            
-            pageThumb.width = viewport.width;
-            pageThumb.height = viewport.height;
-            pageThumb.dataset.pageNum = `${page.pageNumber}`;
-
-            pageThumb.ondrop = this.dropHandler();
-            pageThumb.ondragover = this.dragOverHandler();
-            pageThumb.ondragstart = this.dragStartHandler();
-            pageThumb.ondragenter = this.dragEnterHandler;
-            pageThumb.ondragleave = this.dragLeaveHandler;
-            pageThumb.ondragend = this.dragEndHandler;
-    
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-    
-            const renderTask = page.render(renderContext as RenderParameters);
-            return renderTask.promise;
-        });
-
-        return renderTaskPromise;
-    }
-
     download () {
         const children = this.#container.querySelectorAll('canvas[data-page-num]');
         const pageIndexes = Array.from(children as NodeListOf<HTMLCanvasElement>, (pageThumb) => {
@@ -84,12 +34,58 @@ class PDFGrid {
         return store.download(pageIndexes);
     }
 
+    async render (files: FileList) {
+        this.#container.replaceChildren();
+        
+        const pdf = await store.merge(files);
+        const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
+            const pageNum = index + 1;
+            const pagePromise = pdf.getPage(pageNum);
+
+            return this.renderPage(pagePromise);
+        });
+
+        return Promise.all(renderTasks);
+    }
+
+    async renderPage(pagePromise: Promise<PDFPageProxy>) {
+        const pageThumb = document.createElement('canvas');
+
+        pageThumb.draggable = true;
+        pageThumb.classList = 'pdfier-page';
+
+        this.#container.append(pageThumb);
+
+        const page =  await pagePromise;
+        const viewport = page.getViewport({ scale: this.#THUMB_SCALE });
+        const ctx = pageThumb.getContext('2d');
+        
+        pageThumb.width = viewport.width;
+        pageThumb.height = viewport.height;
+        pageThumb.dataset.pageNum = `${page.pageNumber}`;
+
+        pageThumb.ondrop = this.dropHandler();
+        pageThumb.ondragover = this.dragOverHandler();
+        pageThumb.ondragstart = this.dragStartHandler();
+        pageThumb.ondragenter = this.dragEnterHandler;
+        pageThumb.ondragleave = this.dragLeaveHandler;
+        pageThumb.ondragend = this.dragEndHandler;
+
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+
+        const renderTask = page.render(renderContext as RenderParameters);
+        return renderTask.promise;
+    }
+
     async addNewPage() {
         const pdf = await store.addNewPage();
         const lastPage = pdf.numPages;
         const pagePromise = pdf.getPage(lastPage);
 
-        return this.renderPageThumb(pagePromise);
+        return this.renderPage(pagePromise);
     }
 
     private dropHandler () {

@@ -1,4 +1,4 @@
-import type { DocumentInitParameters, PDFDocumentProxy } from "pdfjs-dist/types/src/display/api.js";
+import type { DocumentInitParameters } from "pdfjs-dist/types/src/display/api.js";
 import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import { saveAs } from 'file-saver';
 import { PDF } from '@libpdf/core';
