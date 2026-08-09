@@ -3,7 +3,7 @@ import { getDocument, GlobalWorkerOptions, version } from 'pdfjs-dist';
 import { saveAs } from 'file-saver';
 import { PDF } from '@libpdf/core';
 
-let _pdf: PDF | null = null;
+let _pdf = PDF.create();
 const _dimensions = { width: 595, height: 842 }; // @libpdf/core A4 dimensions (default 72 DPI)
 
 function setDimessions (width: number, height: number) {
@@ -12,29 +12,20 @@ function setDimessions (width: number, height: number) {
 }
 
 async function merge (fileList: FileList) {
-    const documentsBytes = await Array.fromAsync(fileList, (file) => file.bytes());
-    _pdf = await PDF.merge(documentsBytes);
+    const fileListBytes = await Array.fromAsync(fileList, (file) => file.bytes());
 
-    const loadingTask = getDocument({ data: await _pdf.save() } as DocumentInitParameters);
-    return loadingTask.promise;
-}
+    _pdf = await PDF.merge(fileListBytes);
 
-async function deletePage (pageIndex: number) {
-    if (_pdf == null) {
-        return;
-    }
-
-    _pdf.removePage(pageIndex);
+    _pdf.setMetadata({
+        producer: 'pdf-ctrl',
+        creationDate: new Date(),
+    });
 
     const loadingTask = getDocument({ data: await _pdf.save() } as DocumentInitParameters);
     return loadingTask.promise;
 }
 
 async function addNewPage() {
-    if (_pdf == null) {
-        _pdf = PDF.create();
-    }
-
     _pdf.addPage(_dimensions);
 
     const loadingTask = getDocument({ data: await _pdf.save() } as DocumentInitParameters);
@@ -49,7 +40,7 @@ async function download (pageIndexes: number[]) {
 }
 
 async function getPDF () {
-    const data = _pdf == null ? [] : await _pdf.save();
+    const data = await _pdf.save();
 
     const loadingTask = getDocument({ data } as DocumentInitParameters);
     return loadingTask.promise;
@@ -60,7 +51,6 @@ GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${versi
 export {
     merge,
     addNewPage,
-    deletePage,
     setDimessions,
     download,
     getPDF

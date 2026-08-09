@@ -18,15 +18,17 @@ npm i pdf-ctrl
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF-Ctrl</title>
 
-    <link rel="stylesheet" href="node_modules/pdf-ctrl/dist/pdf-ctrl.min.css">
+    <link rel="stylesheet" href="dist/pdf-ctrl.min.css">
 
     <script type="module" defer>
-        import PDFGrid from './node_modules/pdf-ctrl/dist/pdf-ctrl.min.js';
+        import PDFGrid from './dist/pdf-ctrl.min.js';
 
         document.addEventListener('DOMContentLoaded', () => {
-            const openButton = document.querySelector('#filePicker');
-            const downloadButton = document.querySelector('#download');
-            const add = document.querySelector('#addNewPage');
+            const openBtn = document.querySelector('#filePicker');
+            const reloadBtn = document.querySelector('#reload');
+            const downloadBtn = document.querySelector('#download');
+            const addBtn = document.querySelector('#addNewPage');
+            const removeBtn = document.querySelector('#mode');
             const filePicker = document.createElement('input');
             const grid = new PDFGrid('#main');
 
@@ -34,14 +36,44 @@ npm i pdf-ctrl
             filePicker.multiple = true;
             filePicker.type = 'file';
 
+            reloadBtn.onclick = () => grid.reload();
+
             filePicker.onchange = () => grid.render(filePicker.files);
             
-            add.onclick = (e) => grid.addNewPage();
+            addBtn.onclick = (e) => grid.addNewPage();
 
-            downloadButton.onclick = (e) => grid.download();
+            downloadBtn.onclick = (e) => grid.download();
 
-            openButton.onclick = (e) => filePicker.showPicker();
+            openBtn.onclick = (e) => filePicker.showPicker();
 
+            removeBtn.onclick = (e) => {
+                if (removeBtn.value === 'Remove Pages') {
+                    grid.enableDelete();
+                    removeBtn.value = 'Remove Selected';
+
+                    const cancelBtn = document.createElement('input');
+                    cancelBtn.type = 'button';
+                    cancelBtn.value = 'Cancel';
+                    cancelBtn.classList = 'styled';
+
+                    cancelBtn.onclick = (w) => {
+                        grid.disableDelete();
+                        removeBtn.value = 'Remove Pages';
+                        cancelBtn.remove();    
+                    };
+
+                    removeBtn.after(cancelBtn);
+                } else {
+                    const deleteDialog = document.getElementById('delete-dialog');
+                    deleteDialog.showModal();
+
+                    deleteDialog.onclose = (w) => {
+                        if (deleteDialog.returnValue === 'yes') {
+                            grid.removePages();
+                        }
+                    }
+                }
+            }
         });
     </script>
 
@@ -68,6 +100,7 @@ npm i pdf-ctrl
         }
 
         .styled:hover {
+            font-weight: 300;
             background-color: red;
         }
 
@@ -85,11 +118,21 @@ npm i pdf-ctrl
 <body>
     <div id="toolbar">
         <input class="styled" type="button" value="Open" id="filePicker" />
+        <input class="styled" type="button" value="Reload" id="reload" />
         <input class="styled" type="button" value="Add New Page" id="addNewPage" />
         <input class="styled" type="button" value="Download" id="download" />
+        <input class="styled" type="button" value="Remove Pages" id="mode" />
     </div>
 
     <main id="main"></main>
+
+    <dialog id="delete-dialog">
+        <p>Remove seleted pages?</p>
+        <div style="display: flex; justify-content: center; align-items: center;gap: 4px;">
+            <button commandfor="delete-dialog" command="close" value="yes">Yes</button>
+            <button commandfor="delete-dialog" command="close" value="cancel">Cancel</button>
+        </div>
+    </dialog>
 
     <footer>
         <p>&copy; 2026. Content Rights Reserved.</p>

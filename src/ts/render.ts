@@ -1,12 +1,15 @@
-import { PDFPageProxy, RenderParameters } from "pdfjs-dist/types/src/display/api.js";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api.js";
+import PageThumb from '@ts/page';
 import * as store from '@ts/store';
 
 class PDFGrid {
 
-    #THUMB_SCALE = 0.4;
     #container: HTMLElement;
     #dragged: HTMLElement;
     #hovered: HTMLElement;
+    #controller: AbortController;
+    #eventTarget: EventTarget;
+    #isDeleteModeEnabled = false;
 
     constructor (el: string) {
         const container = document.querySelector(el) as HTMLElement;
@@ -19,11 +22,13 @@ class PDFGrid {
         this.#container.classList = 'pdfier-page-grid';
         this.#dragged = document.createElement('span');
         this.#hovered = document.createElement('span');
+        this.#controller = new AbortController();
+        this.#eventTarget = new EventTarget();
     }
 
     download () {
         const children = this.#container.querySelectorAll('canvas[data-page-num]');
-        const pageIndexes = Array.from(children as NodeListOf<HTMLCanvasElement>, (pageThumb) => {
+        const pageIndexes = Array.from(children as NodeListOf<PageThumb>, (pageThumb) => {
             if (pageThumb.dataset.pageNum == null) {
                 throw Error('undefined pageNum');
             }
@@ -34,10 +39,70 @@ class PDFGrid {
         return store.download(pageIndexes);
     }
 
-    async render (files: FileList) {
-        this.#container.replaceChildren();
-        
+    async render (files: FileList) {        
         const pdf = await store.merge(files);
+        return this.load(pdf);
+    }
+
+    async reload () {
+        const pdf = await store.getPDF();
+        return this.load(pdf);
+    }
+
+    async renderPage(pagePromise: Promise<PDFPageProxy>) {
+        const page =  await pagePromise;
+        const pageThumb = new PageThumb(page)
+
+        this.#container.append(pageThumb);
+
+        return pageThumb.renderPromise.then(() => {
+            pageThumb.ondrop = this.dropHandler();
+            pageThumb.ondragover = this.dragOverHandler();
+            pageThumb.ondragstart = this.dragStartHandler();
+            pageThumb.ondragenter = this.dragEnterHandler;
+            pageThumb.ondragleave = this.dragLeaveHandler;
+            pageThumb.ondragend = this.dragEndHandler;
+
+            if (this.#isDeleteModeEnabled) {
+                pageThumb.showCheckbox();
+            }
+
+            this.#eventTarget.addEventListener('deleteMode', (e) => {
+                pageThumb.showCheckbox();
+            }, { signal: this.#controller.signal });
+
+            this.#eventTarget.addEventListener('viewMode', (e) => {
+                pageThumb.hideCheckbox();
+            }, { signal: this.#controller.signal });
+        });
+    }
+
+    enableDelete () {
+        this.#isDeleteModeEnabled = true;
+        this.#eventTarget.dispatchEvent(new Event('deleteMode'));
+    }
+
+    disableDelete () {
+        this.#isDeleteModeEnabled = false;
+        this.#eventTarget.dispatchEvent(new Event('viewMode'));
+    }
+
+    removePages () {
+        const children = this.#container.querySelectorAll('canvas[data-page-num]');
+        const allPages = Array.from(children as NodeListOf<PageThumb>);
+        const selectedPages = allPages.filter((page) => page.dataset.isChecked === '1');
+
+        for (const page of selectedPages) {
+            page.remove();
+        }
+    }
+
+    private load (pdf: PDFDocumentProxy) {
+        this.#controller.abort();
+        this.#controller = new AbortController();
+
+        this.#container.replaceChildren();
+
         const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
             const pageNum = index + 1;
             const pagePromise = pdf.getPage(pageNum);
@@ -46,38 +111,6 @@ class PDFGrid {
         });
 
         return Promise.all(renderTasks);
-    }
-
-    async renderPage(pagePromise: Promise<PDFPageProxy>) {
-        const pageThumb = document.createElement('canvas');
-
-        pageThumb.draggable = true;
-        pageThumb.classList = 'pdfier-page';
-
-        this.#container.append(pageThumb);
-
-        const page =  await pagePromise;
-        const viewport = page.getViewport({ scale: this.#THUMB_SCALE });
-        const ctx = pageThumb.getContext('2d');
-        
-        pageThumb.width = viewport.width;
-        pageThumb.height = viewport.height;
-        pageThumb.dataset.pageNum = `${page.pageNumber}`;
-
-        pageThumb.ondrop = this.dropHandler();
-        pageThumb.ondragover = this.dragOverHandler();
-        pageThumb.ondragstart = this.dragStartHandler();
-        pageThumb.ondragenter = this.dragEnterHandler;
-        pageThumb.ondragleave = this.dragLeaveHandler;
-        pageThumb.ondragend = this.dragEndHandler;
-
-        const renderContext = {
-            canvasContext: ctx,
-            viewport: viewport
-        };
-
-        const renderTask = page.render(renderContext as RenderParameters);
-        return renderTask.promise;
     }
 
     async addNewPage() {
