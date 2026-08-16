@@ -1,8 +1,9 @@
 {
   "name": "pdf-ctrl",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Merge, rearrange pages, and download all-in-one PDF document",
   "type": "module",
+  "types": "src/ts/types.ts",
   "main": "dist/pdf-ctrl.js",
   "files": [
     "dist",

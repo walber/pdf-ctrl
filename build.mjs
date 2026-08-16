@@ -3,7 +3,7 @@ import { vanillaExtractPlugin } from '@vanilla-extract/esbuild-plugin';
 
 const commonConfig = {
     plugins: [vanillaExtractPlugin()],
-    entryPoints: ['src/ts/render.ts'],
+    entryPoints: ['src/ts/main.ts'],
     sourcemap: true,
     bundle: true,
     format: 'esm',
