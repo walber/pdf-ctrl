@@ -35,7 +35,7 @@
 
             removeBtn.onclick = (e) => {
                 if (removeBtn.value === 'Remove Pages') {
-                    grid.enableDelete();
+                    grid.toggleDeleteMode();
                     removeBtn.value = 'Remove Selected';
 
                     const cancelBtn = document.createElement('input');
@@ -44,7 +44,7 @@
                     cancelBtn.classList = 'styled';
 
                     cancelBtn.onclick = (w) => {
-                        grid.disableDelete();
+                        grid.toggleDeleteMode();
                         removeBtn.value = 'Remove Pages';
                         cancelBtn.remove();    
                     };

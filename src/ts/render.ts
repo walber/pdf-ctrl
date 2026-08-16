@@ -1,5 +1,5 @@
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api.js";
-import PageThumb from '@ts/page';
+import PageThumb, { CHECKBOX_PROPS } from '@ts/page';
 import * as store from '@ts/store';
 
 class PDFGrid {
@@ -39,6 +39,21 @@ class PDFGrid {
         return store.download(pageIndexes);
     }
 
+    toggleDeleteMode () {
+        this.#isDeleteModeEnabled = !this.#isDeleteModeEnabled;
+        this.#eventTarget.dispatchEvent(new Event('toggleDeleteMode'));
+    }
+
+    removePages () {
+        const children = this.#container.querySelectorAll('canvas[data-page-num]');
+        const allPages = Array.from(children as NodeListOf<PageThumb>);
+        const selectedPages = allPages.filter((page) => page.dataset.isChecked === '1');
+
+        for (const page of selectedPages) {
+            page.remove();
+        }
+    }
+
     async render (files: FileList) {        
         const pdf = await store.merge(files);
         return this.load(pdf);
@@ -62,39 +77,24 @@ class PDFGrid {
             pageThumb.ondragenter = this.dragEnterHandler;
             pageThumb.ondragleave = this.dragLeaveHandler;
             pageThumb.ondragend = this.dragEndHandler;
+            pageThumb.onclick = this.clickHandler();
 
             if (this.#isDeleteModeEnabled) {
                 pageThumb.showCheckbox();
             }
 
-            this.#eventTarget.addEventListener('deleteMode', (e) => {
-                pageThumb.showCheckbox();
-            }, { signal: this.#controller.signal });
-
-            this.#eventTarget.addEventListener('viewMode', (e) => {
-                pageThumb.hideCheckbox();
+            this.#eventTarget.addEventListener('toggleDeleteMode', (e) => {
+                this.#isDeleteModeEnabled ? pageThumb.showCheckbox() : pageThumb.hideCheckbox();
             }, { signal: this.#controller.signal });
         });
     }
 
-    enableDelete () {
-        this.#isDeleteModeEnabled = true;
-        this.#eventTarget.dispatchEvent(new Event('deleteMode'));
-    }
+    async addNewPage() {
+        const pdf = await store.addNewPage();
+        const lastPage = pdf.numPages;
+        const pagePromise = pdf.getPage(lastPage);
 
-    disableDelete () {
-        this.#isDeleteModeEnabled = false;
-        this.#eventTarget.dispatchEvent(new Event('viewMode'));
-    }
-
-    removePages () {
-        const children = this.#container.querySelectorAll('canvas[data-page-num]');
-        const allPages = Array.from(children as NodeListOf<PageThumb>);
-        const selectedPages = allPages.filter((page) => page.dataset.isChecked === '1');
-
-        for (const page of selectedPages) {
-            page.remove();
-        }
+        return this.renderPage(pagePromise);
     }
 
     private load (pdf: PDFDocumentProxy) {
@@ -113,12 +113,26 @@ class PDFGrid {
         return Promise.all(renderTasks);
     }
 
-    async addNewPage() {
-        const pdf = await store.addNewPage();
-        const lastPage = pdf.numPages;
-        const pagePromise = pdf.getPage(lastPage);
+    private clickHandler () {
+        return (e: MouseEvent) => {
+            if (!this.#isDeleteModeEnabled) {
+                return;
+            }
+    
+            const target = e.target as PageThumb;
+            const rect = target.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+    
+            // Check if click is inside the box boundaries
+            const isInsideX = mouseX >= CHECKBOX_PROPS.x && mouseX <= CHECKBOX_PROPS.x + CHECKBOX_PROPS.width;
+            const isInsideY = mouseY >= CHECKBOX_PROPS.y && mouseY <= CHECKBOX_PROPS.y + CHECKBOX_PROPS.height;
 
-        return this.renderPage(pagePromise);
+            if (isInsideX && isInsideY) {
+                target.dataset.isChecked = target.dataset.isChecked === '1' ? '0' : '1';
+                target.showCheckbox();
+            }
+        }
     }
 
     private dropHandler () {
@@ -162,7 +176,7 @@ class PDFGrid {
             this.#hovered = target;
             
             const targetRect = target.getBoundingClientRect();
-            const targetCenterX = targetRect.left + targetRect.width / 2;          
+            const targetCenterX = targetRect.left + targetRect.width / 2;
 
             document.startViewTransition(() => {
                 const hasEnteredThroughLeftSide = e.clientX < targetCenterX;
