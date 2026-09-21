@@ -21,7 +21,7 @@ npm i pdf-ctrl
     <link rel="stylesheet" href="dist/pdf-ctrl.min.css">
 
     <script type="module" defer>
-        import PDFGrid from './dist/pdf-ctrl.min.js';
+        import * as pdfCtrl from './dist/pdf-ctrl.min.js';
 
         document.addEventListener('DOMContentLoaded', () => {
             const openBtn = document.querySelector('#filePicker');
@@ -30,25 +30,24 @@ npm i pdf-ctrl
             const addBtn = document.querySelector('#addNewPage');
             const removeBtn = document.querySelector('#mode');
             const filePicker = document.createElement('input');
-            const grid = new PDFGrid('#main');
 
             filePicker.accept = 'application/pdf';
             filePicker.multiple = true;
             filePicker.type = 'file';
 
-            reloadBtn.onclick = () => grid.reload();
+            reloadBtn.onclick = () => pdfCtrl.refresh();
 
-            filePicker.onchange = () => grid.render(filePicker.files);
+            filePicker.onchange = () => pdfCtrl.load('#main', filePicker.files);
             
-            addBtn.onclick = (e) => grid.addNewPage();
+            addBtn.onclick = (e) => pdfCtrl.addNewPage();
 
-            downloadBtn.onclick = (e) => grid.download();
+            downloadBtn.onclick = (e) => pdfCtrl.download();
 
             openBtn.onclick = (e) => filePicker.showPicker();
 
             removeBtn.onclick = (e) => {
                 if (removeBtn.value === 'Remove Pages') {
-                    grid.toggleDeleteMode();
+                    pdfCtrl.toggleDeleteMode();
                     removeBtn.value = 'Remove Selected';
 
                     const cancelBtn = document.createElement('input');
@@ -57,10 +56,10 @@ npm i pdf-ctrl
                     cancelBtn.classList = 'styled';
 
                     cancelBtn.onclick = (w) => {
-                        grid.toggleDeleteMode();
+                        pdfCtrl.toggleDeleteMode();
                         removeBtn.value = 'Remove Pages';
                         cancelBtn.remove();    
-                    };
+                    }
 
                     removeBtn.after(cancelBtn);
                 } else {
@@ -69,7 +68,7 @@ npm i pdf-ctrl
 
                     deleteDialog.onclose = (w) => {
                         if (deleteDialog.returnValue === 'yes') {
-                            grid.removePages();
+                            pdfCtrl.removePages();
                         }
                     }
                 }

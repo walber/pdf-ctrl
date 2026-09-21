@@ -1,15 +1,14 @@
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api.js";
-import PageThumb, { CHECKBOX_PROPS } from '@ts/page';
-import * as store from '@ts/store';
+import PageThumb from '@ts/page';
 
 class PDFGrid {
 
     #container: HTMLElement;
     #dragged: HTMLElement;
     #hovered: HTMLElement;
-    #controller: AbortController;
     #eventTarget: EventTarget;
-    #isDeleteModeEnabled = false;
+    #controller: AbortController;
+    #isDeleteModeEnabled: boolean;
 
     constructor (el: string) {
         const container = document.querySelector(el) as HTMLElement;
@@ -19,14 +18,31 @@ class PDFGrid {
         }
 
         this.#container = container;
+        this.#isDeleteModeEnabled = false;
         this.#container.classList = 'pdfier-page-grid';
         this.#dragged = document.createElement('span');
         this.#hovered = document.createElement('span');
-        this.#controller = new AbortController();
         this.#eventTarget = new EventTarget();
+        this.#controller = new AbortController();
     }
 
-    download () {
+    load (pdf: PDFDocumentProxy) {
+        this.#container.replaceChildren();
+        this.#controller.abort();
+
+        this.#controller = new AbortController();
+
+        const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
+            const pageNum = index + 1;
+            const pagePromise = pdf.getPage(pageNum);
+
+            return this.renderPage(pagePromise);
+        });
+
+        return Promise.all(renderTasks);
+    }
+
+    pageIndexes () {
         const children = this.#container.querySelectorAll('canvas[data-page-num]');
         const pageIndexes = Array.from(children as NodeListOf<PageThumb>, (pageThumb) => {
             if (pageThumb.dataset.pageNum == null) {
@@ -36,12 +52,7 @@ class PDFGrid {
             return Number.parseInt(pageThumb.dataset.pageNum) - 1;
         });
 
-        return store.download(pageIndexes);
-    }
-
-    toggleDeleteMode () {
-        this.#isDeleteModeEnabled = !this.#isDeleteModeEnabled;
-        this.#eventTarget.dispatchEvent(new Event('toggleDeleteMode'));
+        return pageIndexes;
     }
 
     removePages () {
@@ -49,19 +60,18 @@ class PDFGrid {
         const allPages = Array.from(children as NodeListOf<PageThumb>);
         const selectedPages = allPages.filter((page) => page.dataset.isChecked === '1');
 
-        for (const page of selectedPages) {
+        const removedPages = selectedPages.map(page => {
+            const pageNum = page.dataset.pageNum;
             page.remove();
-        }
+            return pageNum;
+        });
+
+        return removedPages;
     }
 
-    async render (files: FileList) {        
-        const pdf = await store.merge(files);
-        return this.load(pdf);
-    }
-
-    async reload () {
-        const pdf = await store.getPDF();
-        return this.load(pdf);
+    toggleDeleteMode () {
+        this.#isDeleteModeEnabled = !this.#isDeleteModeEnabled;
+        this.#eventTarget.dispatchEvent(new Event('toggleDeleteMode'));
     }
 
     async renderPage(pagePromise: Promise<PDFPageProxy>) {
@@ -74,43 +84,18 @@ class PDFGrid {
             pageThumb.ondrop = this.dropHandler();
             pageThumb.ondragover = this.dragOverHandler();
             pageThumb.ondragstart = this.dragStartHandler();
-            pageThumb.ondragenter = this.dragEnterHandler;
-            pageThumb.ondragleave = this.dragLeaveHandler;
-            pageThumb.ondragend = this.dragEndHandler;
             pageThumb.onclick = this.clickHandler();
 
             if (this.#isDeleteModeEnabled) {
-                pageThumb.showCheckbox();
+                pageThumb.drawCheckbox();
             }
 
             this.#eventTarget.addEventListener('toggleDeleteMode', (e) => {
-                this.#isDeleteModeEnabled ? pageThumb.showCheckbox() : pageThumb.hideCheckbox();
+                this.#isDeleteModeEnabled ? pageThumb.drawCheckbox() : pageThumb.removeCheckbox();
             }, { signal: this.#controller.signal });
+
+            return pageThumb;
         });
-    }
-
-    async addNewPage() {
-        const pdf = await store.addNewPage();
-        const lastPage = pdf.numPages;
-        const pagePromise = pdf.getPage(lastPage);
-
-        return this.renderPage(pagePromise);
-    }
-
-    private load (pdf: PDFDocumentProxy) {
-        this.#controller.abort();
-        this.#controller = new AbortController();
-
-        this.#container.replaceChildren();
-
-        const renderTasks = Array.from({ length: pdf.numPages }, (_, index) => {
-            const pageNum = index + 1;
-            const pagePromise = pdf.getPage(pageNum);
-
-            return this.renderPage(pagePromise);
-        });
-
-        return Promise.all(renderTasks);
     }
 
     private clickHandler () {
@@ -118,20 +103,9 @@ class PDFGrid {
             if (!this.#isDeleteModeEnabled) {
                 return;
             }
-    
-            const target = e.target as PageThumb;
-            const rect = target.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-    
-            // Check if click is inside the box boundaries
-            const isInsideX = mouseX >= CHECKBOX_PROPS.x && mouseX <= CHECKBOX_PROPS.x + CHECKBOX_PROPS.width;
-            const isInsideY = mouseY >= CHECKBOX_PROPS.y && mouseY <= CHECKBOX_PROPS.y + CHECKBOX_PROPS.height;
 
-            if (isInsideX && isInsideY) {
-                target.dataset.isChecked = target.dataset.isChecked === '1' ? '0' : '1';
-                target.showCheckbox();
-            }
+            const target = e.target as PageThumb;
+            target.toggleCheckbox(e);
         }
     }
 
@@ -202,24 +176,6 @@ class PDFGrid {
                 });
             });
         }
-    }
-
-    private dragLeaveHandler (e: DragEvent) {
-        if (e.target) {
-            const target = e.target as HTMLElement;
-            target.classList.remove('insert-before', 'insert-after');
-        }
-    }
-
-    private dragEndHandler (e: DragEvent) {
-        if (e.target) {
-            const target = e.target as HTMLElement;
-            target.classList.remove('dragging');
-        }
-    }
-
-    private dragEnterHandler (e: DragEvent) {
-        e.preventDefault();
     }
 }
 

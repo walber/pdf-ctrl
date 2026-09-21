@@ -27,7 +27,8 @@ class PageThumb extends HTMLCanvasElement {
         this.width = viewport.width;
         this.height = viewport.height;
         this.#thumbImageURL = this.toDataURL();
-
+        
+        this.dataset.isChecked = '0';
         this.dataset.pageNum = `${page.pageNumber}`;
 
         const renderContext = {
@@ -40,12 +41,16 @@ class PageThumb extends HTMLCanvasElement {
         this.renderPromise = renderTask.promise.finally(() => {
             this.#thumbImageURL = this.toDataURL();
         });
+
+        this.ondragend = this.dragEndHandler;
+        this.ondragleave = this.dragLeaveHandler;
+        this.ondragenter = (e: DragEvent) => e.preventDefault();
     }
 
-    showCheckbox() {
+    drawCheckbox() {
         document.startViewTransition(() => {
             const ctx = this.getContext('2d') as CanvasRenderingContext2D;
-           
+
             // Clear canvas area around the checkbox
             ctx.clearRect(CHECKBOX_PROPS.x, CHECKBOX_PROPS.y, CHECKBOX_PROPS.width, CHECKBOX_PROPS.height);
     
@@ -71,7 +76,7 @@ class PageThumb extends HTMLCanvasElement {
         });
     }
 
-    hideCheckbox () {
+    removeCheckbox () {
         document.startViewTransition(() => {
             const thumb = new Image();
             const ctx = this.getContext('2d') as CanvasRenderingContext2D; 
@@ -80,16 +85,41 @@ class PageThumb extends HTMLCanvasElement {
     
             thumb.src = this.#thumbImageURL;
             this.dataset.isChecked = '0';
-    
+
             thumb.onload = () => ctx.drawImage(thumb, 0, 0);
         });
+    }
+
+    toggleCheckbox (e: MouseEvent) {
+        const rect = this.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check if click is inside the box boundaries
+        const isInsideX = mouseX >= CHECKBOX_PROPS.x && mouseX <= (CHECKBOX_PROPS.x + CHECKBOX_PROPS.width);
+        const isInsideY = mouseY >= CHECKBOX_PROPS.y && mouseY <= (CHECKBOX_PROPS.y + CHECKBOX_PROPS.height);
+
+        if (isInsideX && isInsideY) {
+            this.dataset.isChecked = this.dataset.isChecked === '1' ? '0' : '1';
+            this.drawCheckbox();
+        }
+    }
+
+    private dragLeaveHandler (e: DragEvent) {
+        if (e.target) {
+            const target = e.target as HTMLElement;
+            target.classList.remove('insert-before', 'insert-after');
+        }
+    }
+
+    private dragEndHandler (e: DragEvent) {
+        if (e.target) {
+            const target = e.target as HTMLElement;
+            target.classList.remove('dragging');
+        }
     }
 }
 
 window.customElements.define('page-thumb', PageThumb, { extends: 'canvas' });
 
 export default PageThumb;
-
-export {
-    CHECKBOX_PROPS,
-}

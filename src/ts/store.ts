@@ -21,7 +21,8 @@ async function merge (fileList: FileList) {
         creationDate: new Date(),
     });
 
-    const loadingTask = getDocument({ data: await _pdf.save() } as DocumentInitParameters);
+    const data = await _pdf.save();
+    const loadingTask = getDocument({ data } as DocumentInitParameters);
     return loadingTask.promise;
 }
 
@@ -39,9 +40,9 @@ async function download (pageIndexes: number[]) {
     saveAs(new Blob([data as BlobPart], { type: 'application/pdf' }), 'newDoc.pdf');
 }
 
-async function getPDF () {
-    const data = await _pdf.save();
-
+async function getPDF (pageIndexes: number[] = []) {
+    const data = await (pageIndexes.length > 0 ? _pdf.extractPages(pageIndexes) : _pdf.save());
+    
     const loadingTask = getDocument({ data } as DocumentInitParameters);
     return loadingTask.promise;
 }
