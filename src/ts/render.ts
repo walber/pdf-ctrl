@@ -59,14 +59,11 @@ class PDFGrid {
         const children = this.#container.querySelectorAll('canvas[data-page-num]');
         const allPages = Array.from(children as NodeListOf<PageThumb>);
         const selectedPages = allPages.filter((page) => page.dataset.isChecked === '1');
+        const pageNumbers = selectedPages.map(page => page.dataset.pageNum);
 
-        const removedPages = selectedPages.map(page => {
-            const pageNum = page.dataset.pageNum;
-            page.remove();
-            return pageNum;
-        });
+        selectedPages.forEach(page => page.remove());
 
-        return removedPages;
+        return pageNumbers;
     }
 
     toggleDeleteMode () {
