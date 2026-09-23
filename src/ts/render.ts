@@ -68,7 +68,8 @@ class PDFGrid {
 
     toggleDeleteMode () {
         this.#isDeleteModeEnabled = !this.#isDeleteModeEnabled;
-        this.#eventTarget.dispatchEvent(new Event('toggleDeleteMode'));
+        console.log("toggleDeleteMode:", this.#isDeleteModeEnabled);
+        document.startViewTransition(() => this.#eventTarget.dispatchEvent(new Event('toggleDeleteMode')));
     }
 
     async renderPage(pagePromise: Promise<PDFPageProxy>) {
@@ -82,6 +83,8 @@ class PDFGrid {
             pageThumb.ondragover = this.dragOverHandler();
             pageThumb.ondragstart = this.dragStartHandler();
             pageThumb.onclick = this.clickHandler();
+
+            console.log("isDeleteModeEnabled:", this.#isDeleteModeEnabled);
 
             if (this.#isDeleteModeEnabled) {
                 pageThumb.drawCheckbox();

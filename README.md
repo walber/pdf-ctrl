@@ -29,11 +29,18 @@ npm i pdf-ctrl
             const downloadBtn = document.querySelector('#download');
             const addBtn = document.querySelector('#addNewPage');
             const removeBtn = document.querySelector('#mode');
+            const cancelBtn = document.querySelector('#cancel');
             const filePicker = document.createElement('input');
 
             filePicker.accept = 'application/pdf';
             filePicker.multiple = true;
             filePicker.type = 'file';
+
+            cancelBtn.onclick = (w) => {
+                pdfCtrl.toggleDeleteMode();
+                removeBtn.value = 'Remove Pages';
+                cancelBtn.style.visibility = 'hidden';
+            }
 
             reloadBtn.onclick = () => pdfCtrl.refresh();
 
@@ -49,19 +56,8 @@ npm i pdf-ctrl
                 if (removeBtn.value === 'Remove Pages') {
                     pdfCtrl.toggleDeleteMode();
                     removeBtn.value = 'Remove Selected';
+                    cancelBtn.style.visibility = 'visible';
 
-                    const cancelBtn = document.createElement('input');
-                    cancelBtn.type = 'button';
-                    cancelBtn.value = 'Cancel';
-                    cancelBtn.classList = 'styled';
-
-                    cancelBtn.onclick = (w) => {
-                        pdfCtrl.toggleDeleteMode();
-                        removeBtn.value = 'Remove Pages';
-                        cancelBtn.remove();    
-                    }
-
-                    removeBtn.after(cancelBtn);
                 } else {
                     const deleteDialog = document.getElementById('delete-dialog');
                     deleteDialog.showModal();
@@ -69,6 +65,9 @@ npm i pdf-ctrl
                     deleteDialog.onclose = (w) => {
                         if (deleteDialog.returnValue === 'yes') {
                             pdfCtrl.removePages();
+                            pdfCtrl.toggleDeleteMode();
+                            removeBtn.value = 'Remove Pages';
+                            cancelBtn.style.visibility = 'hidden';
                         }
                     }
                 }
@@ -121,6 +120,7 @@ npm i pdf-ctrl
         <input class="styled" type="button" value="Add New Page" id="addNewPage" />
         <input class="styled" type="button" value="Download" id="download" />
         <input class="styled" type="button" value="Remove Pages" id="mode" />
+        <input class="styled" type="button" value="Cancel" id="cancel" style="visibility: hidden;" />
     </div>
 
     <main id="main"></main>
